@@ -23,9 +23,11 @@
     Initial version.
 #>
 using module ..\Entities\GitItemParams.psm1
+using module .\ConfigHelper.psm1
 
 class AzureDevopsApiUrls {
     [string]$AccountName
+    [string]$ProjectUrl
     [string]$ProjectName
     [string]$ApiVersion
 
@@ -33,6 +35,10 @@ class AzureDevopsApiUrls {
         $this.AccountName = $accountName
         $this.ProjectName = $projectName
         $this.ApiVersion = "5.0"
+
+        $config = [ConfigHelper]::new()
+
+        $this.ProjectUrl = $config.GetStringFromConfig("baseUrl")
     }
 
     [void]WriteUrl([string]$message) {
@@ -48,7 +54,7 @@ class AzureDevopsApiUrls {
     }
 
     [string]GetUrlBase (){
-        return "https://dev.azure.com/$($this.AccountName)/$($this.ProjectName)"
+        return "$($this.ProjectUrl)/$($this.AccountName)/$($this.ProjectName)"
     }
     #region Build Definitions
     [string]GetUrlBuildDefinitions ([string] $path, [string]$filterName){
