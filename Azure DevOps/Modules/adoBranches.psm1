@@ -90,8 +90,8 @@ class adoBranches {
                 Write-Debug "[PublishListBranches] [MailMessage] Subject: $($mailSubject)"
 
                 $mailBody = $ListBranches.GetOverviewHtml($daysAgoLastActivity)
-                If($config.GetStringFromConfig("EmailTo")){
-                    $stringTo = $config.GetStringFromConfig("EmailTo")
+                If($this.config.GetStringFromConfig("EmailTo")){
+                    $stringTo = $this.config.GetStringFromConfig("EmailTo")
                 }Else{
                     $stringTo = $ListBranches.GetUniqueEmailAdresses() -join ","
                 }
