@@ -14,16 +14,20 @@
 using module ..\Entities\AdoInfo.psm1
 using module ..\Entities\Branches.psm1
 using module ..\Helpers\ApiUrlsHelpers.psm1
+using module ..\Helpers\ConfigHelper.psm1
 using module ..\..\Generic\Modules\modMail-Utils.psm1
 
 class adoBranches {
 
     [AdoInfo]$AdoInfo
+    [ConfigHelper]$config
 
     adoBranches([AdoInfo]$adoInfo)
     {
         $this.AdoInfo = $adoInfo
         Write-Debug "[adoBranches] Init"
+
+        $this.config = [ConfigHelper]::new()
     }
     <#
     .SYNOPSIS
@@ -86,7 +90,11 @@ class adoBranches {
                 Write-Debug "[PublishListBranches] [MailMessage] Subject: $($mailSubject)"
 
                 $mailBody = $ListBranches.GetOverviewHtml($daysAgoLastActivity)
-                $stringTo = $ListBranches.GetUniqueEmailAdresses() -join ","
+                If($config.GetStringFromConfig("EmailTo")){
+                    $stringTo = $config.GetStringFromConfig("EmailTo")
+                }Else{
+                    $stringTo = $ListBranches.GetUniqueEmailAdresses() -join ","
+                }
                 Write-Debug "[PublishListBranches] [MailMessage] Mail to: $($stringTo)"
 
                 $mailMsgObj = [MailMsg]::new($senderMail, $stringTo, $mailSubject, $mailBody, $true)

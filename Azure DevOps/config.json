@@ -1,0 +1,11 @@
+{
+    "baseUrl": "https://dev.azure.com",
+    "accountName": "",
+    "projectName": "",
+    "repositoryNames": [],
+    "displayDebugMessages": true,
+    "token": "token",
+    "dropFolderMail": "C:/temp/",
+    "senderEmail": "example-sender@example.com",
+    "EmailTo": "example-to@example.com"
+}
