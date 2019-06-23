@@ -32,3 +32,13 @@ param([bool]$displayDebug)
         # $global:ErrorView = 'NormalView'
     }
 }
+
+function NewSHA1 {
+    param([string]$clearString)
+
+    $hasher = [System.Security.Cryptography.HashAlgorithm]::Create('sha1')
+    $hash = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($clearString))
+
+    $hashString = [System.BitConverter]::ToString($hash)
+    return $hashString.Replace('-', '')
+}

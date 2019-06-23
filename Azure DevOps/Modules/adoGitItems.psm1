@@ -41,10 +41,9 @@ class adoGitItems {
     #>
     [string[]]ListComponents([GitItemParams]$gitItemParams) {
         Try {
-            $url = $this.adoInfo.AzureDevopsApiUrls.GetUrlGitItems($this.adoInfo.RepositoryNames[0], $gitItemParams)
+            $url = $this.adoInfo.UrlAPI.GetUrlGitItems($this.adoInfo.RepositoryNames[0], $gitItemParams)
 
-            $gitItems = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" `
-                                        -Headers @{Authorization=("Basic {0}" -f $this.adoInfo.base64AuthInfo)}
+            $gitItems =  $this.AdoInfo.CallRestMethodGet($url)
             $filteredItems = @()
             $filteredItems = $gitItems.value | Where-Object { $_.gitObjectType -eq 'blob' -and $_.path -like $gitItemParams.FilterPath }
 

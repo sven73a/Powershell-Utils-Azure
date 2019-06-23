@@ -44,14 +44,14 @@ function Release-Notes {
 
         ForEach ($repo in $objAdoInfo.RepositoryNames)
         {
-            $url = $objAdoInfo.AzureDevopsApiUrls.GetUrlPullRequests($repo, $null, $null)
+            $url = $objAdoInfo.UrlAPI.GetUrlPullRequests($repo, $null, $null)
 
             $pullRequests = $objAdoInfo.CallRestMethodGet($url)
             If ($null -eq $pullRequests.value)
             {
                 Throw "[Release-Notes] [Test-Json] Invalid response. Is token valid?"
             }
-            $urlCommits = $objAdoInfo.AzureDevopsApiUrls.GetUrlPullRequestCommits($repo, $pullRequests.value[0].pullRequestId)
+            $urlCommits = $objAdoInfo.UrlAPI.GetUrlPullRequestCommits($repo, $pullRequests.value[0].pullRequestId)
             $commits = $objAdoInfo.CallRestMethodGet($urlCommits)
             Write-Debug "[Release-Notess] Result.Count: $($pullRequests.Count) for '$($repo)'"
 
@@ -59,12 +59,12 @@ function Release-Notes {
             ForEach ($commit in $commits.value) {
                 $commit.commitId
 
-                $urlSingleCommit = $objAdoInfo.AzureDevopsApiUrls.GetUrlCommit($repo, $commit.commitId)
+                $urlSingleCommit = $objAdoInfo.UrlAPI.GetUrlCommit($repo, $commit.commitId)
                 $singleCommit = $objAdoInfo.CallRestMethodGet($urlSingleCommit)
                 $releaseNote = [ReleaseNote]::new($singleCommit.comment)
 
                 if($releaseNote.PRComment -eq "`n") {
-                    $urlSingleCommitChanges = $objAdoInfo.AzureDevopsApiUrls.GetUrlCommitChanges($repo, $commit.commitId)
+                    $urlSingleCommitChanges = $objAdoInfo.UrlAPI.GetUrlCommitChanges($repo, $commit.commitId)
                     $singleCommitChanges = $objAdoInfo.CallRestMethodGet($urlSingleCommitChanges)
                     ForEach ($change in $singleCommitChanges.changes | Where-Object { $_.item.gitObjectType -eq 'tree' }) {
                         $componentName = $change.item.path.Split("/")[1]
@@ -75,14 +75,14 @@ function Release-Notes {
                 # ForEach ($readme in $singleCommitChanges.changes | Where-Object { $_.item.gitObjectType -eq 'blob' -and $_.item.path -like '*readme.md'}) {
                 #     $componentName = $readme.item.path.Split("/")[1]
                 #     Write-Debug "[adoPullRequests] Release-note-changes: $($componentName)"
-                #     if ($releaseNoteCollection2.ReleaseNotes.Count -eq 0 -or $releaseNoteCollection2.ReleaseNotes.ComponentName.contains($componentName) -eq $false) {
-                #         $noteComponent = $releaseNoteCollection.ReleaseNotes | Where-Object { $_.ComponentName -eq $componentName }
+                #     if ($releaseNoteCollection2.Collection.Count -eq 0 -or $releaseNoteCollection2.Collection.ComponentName.contains($componentName) -eq $false) {
+                #         $noteComponent = $releaseNoteCollection.Collection | Where-Object { $_.ComponentName -eq $componentName }
                 #         if ($null -ne $noteComponent) {
                 #             $noteComponent.Path = $readme.item.path
                 #             $noteComponent.Url = $readme.item.url
                 #             Write-Debug "[adoPullRequests] $($readme.item.url)"
                 #             if ($readme.changeType -ne 'delete') {
-                #                 $noteComponent.FullText = Invoke-WebRequest -Uri $readme.item.url -Method Get -Headers @{Authorization=("Basic {0}" -f $objAdoInfo.Base64AuthInfo)}
+                #                 $noteComponent.FullText = Invoke-WebRequest -Uri $readme.item.url -Method Get -Headers @{Authorization=("Basic {0}" -f $objAdoInfo.GetBase64AuthInfo())}
                 #             }
                 #             else {
                 #                 $noteComponent.Text = "Deleted"
@@ -94,8 +94,8 @@ function Release-Notes {
                 $releaseNoteCollection.Add($releaseNote)
             }
             $retValue = "# Release Notes`n`n"
-            $retValue += $releaseNoteCollection.ReleaseNotes.PRComment
-            # $retValue = $releaseNoteCollection2.ReleaseNotes.ComponentName | Sort-Object { $_ } | Select-Object {"[UPDATED] " + $_ + " - 20190204.1" }u
+            $retValue += $releaseNoteCollection.Collection.PRComment
+            # $retValue = $releaseNoteCollection2.Collection.ComponentName | Sort-Object { $_ } | Select-Object {"[UPDATED] " + $_ + " - 20190204.1" }u
             $retValue | Out-File -FilePath 'C:\temp\release-notes.md'
         }
     }

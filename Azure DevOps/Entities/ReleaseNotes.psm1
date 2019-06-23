@@ -1,8 +1,9 @@
+using module .\Base\CollectionBase.psm1
 <#
-.SYNOPSIS  
-    <see description> 
-  
-.DESCRIPTION  
+.SYNOPSIS
+    <see description>
+
+.DESCRIPTION
     Module file with class to gather information for generating release notes
 
 .PARAMETER PROPERTY ComponentName
@@ -23,7 +24,7 @@
 .NOTES
     AUTHOR: Sven Ansem
     LASTEDIT: Feb 11, 2019
-    
+
     Initial version.
 #>
 
@@ -31,11 +32,11 @@ class ReleaseNote
 {
     [string]$ComponentName
     [string]$PRComment
-    [string]$Path    
+    [string]$Path
     [string]$Url
-    [string]$Text    
+    [string]$Text
     [string]$FullText
-    
+
     # ReleaseNote([string]$componentName)
     # {
     #     $this.ComponentName = $componentName
@@ -56,15 +57,6 @@ class ReleaseNote
 <#
 Collection of Release Notes
 #>
-class ReleaseNoteCollection {
-    [ReleaseNote[]]$ReleaseNotes
-
-    ReleaseNoteCollection() {
-        $this.ReleaseNotes = @()
-    }
-
-    [void]Add([ReleaseNote] $releaseNote) {
-        $this.ReleaseNotes += $releaseNote
-    }
+class ReleaseNoteCollection : CollectionBase {
 
 }

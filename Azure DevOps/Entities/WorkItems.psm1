@@ -1,3 +1,4 @@
+using module .\Base\CollectionBase.psm1
 using module .\PullRequests.psm1
 <#
 .SYNOPSIS
@@ -40,17 +41,7 @@ class WorkItem {
 <#
 Collection of Work Items
 #>
-class WorkItemCollection {
-    [WorkItem[]]$WorkItems
-
-    WorkItemCollection() {
-        $this.WorkItems = @()
-    }
-
-    [void]AddWorkItem([WorkItem] $workItem) {
-        $this.WorkItems += $workItem
-    }
-
+class WorkItemCollection : CollectionBase {
     <#
     Report for ChangeManagement dat can be send to Michael Jaeger.
     It outputs a raw version, which has to be manually added
@@ -63,7 +54,7 @@ class WorkItemCollection {
         $headStyle = GetHtmlHeadStyle(90)
         $signature = GetSignature
 
-        $overView += $this.WorkItems | ConvertTo-Html -Property `
+        $overView += $this.Collection | ConvertTo-Html -Property `
             @{l='Branche Name'; e={$_.PullRequest.RepoName}}, `
             @{l='WorkItem Id'; e={"<a href='$($_.WebUrl)'>$($_.Id)</a>"}}, `
             @{l='Available Since'; e={$_.PullRequest.CompletedOn.ToString("dd MMM yyyy")}}, `

@@ -52,9 +52,9 @@ class adoPullRequests {
             $ListPullRequests = [PullRequestCollection]::new()
             ForEach ($repo in $this.AdoInfo.RepositoryNames)
             {
-                $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlPullRequests($repo, $null, $null)
+                $url = $this.adoInfo.UrlAPI.GetUrlPullRequests($repo, $null, $null)
 
-                $pullRequests = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+                $pullRequests = $this.AdoInfo.CallRestMethodGet($url)
                 If ($null -eq $pullRequests.value)
                 {
                     Throw "[adoPullRequests] [Test-Json] Invalid response. Is token valid?"
@@ -65,18 +65,18 @@ class adoPullRequests {
                     Write-Debug "[adoPullRequests]  $($pr.repository.name)"
                     $objPullRequest = [PullRequest]::new($pr.repository.name, $pr.targetRefName.replace('refs/heads/',''), `
                         $pr.title, $pr.createdBy.displayName, $pr.status, $pr.isDraft, $pr.creationDate, `
-                        $this.AdoInfo.AzureDevopsApiUrls.GetUrlPullRequest($repo, $pr.pullRequestId))
+                        $this.adoInfo.UrlAPI.GetUrlPullRequest($repo, $pr.pullRequestId))
 
                     ForEach ($reviewer in $pr.reviewers) {
                         $objReviewer = [Reviewer]::new($reviewer.displayName, $reviewer.uniqueName)
                         $objPullRequestReviewer = [PullRequestReviewer]::new($objReviewer, $reviewer.vote)
                         $objPullRequest.PullRequestReviewers += $objPullRequestReviewer
                     }
-                    $ListPullRequests.AddPullRequest($objPullRequest)
+                    $ListPullRequests.Add($objPullRequest)
                 }
             }
 
-            If ($ListPullRequests.PullRequests.Count -ne 0) {
+            If ($ListPullRequests.Collection.Count -ne 0) {
                 $dtmToday = (Get-Date).ToString("dd MMM yyyy HH:mm")
                 $mailSubject = "Review Reminder pending Pull Requests - $($dtmToday)"
                 Write-Debug "[adoPullRequests] [MailMessage] Subject: $($mailSubject)"

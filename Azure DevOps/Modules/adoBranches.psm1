@@ -12,22 +12,20 @@
     Initial version.
 #>
 using module ..\Entities\AdoInfo.psm1
+using module ..\Entities\RequestBodyCreateBranch.psm1
 using module ..\Entities\Branches.psm1
-using module ..\Helpers\ApiUrlsHelpers.psm1
 using module ..\Helpers\ConfigHelper.psm1
 using module ..\..\Generic\Modules\modMail-Utils.psm1
 
 class adoBranches {
 
     [AdoInfo]$AdoInfo
-    [ConfigHelper]$config
-
+    [ConfigHelper]$Config
     adoBranches([AdoInfo]$adoInfo)
     {
         $this.AdoInfo = $adoInfo
         Write-Debug "[adoBranches] Init"
-
-        $this.config = [ConfigHelper]::new()
+        $this.Config = [ConfigHelper]::new()
     }
     <#
     .SYNOPSIS
@@ -56,10 +54,9 @@ class adoBranches {
         Try {
             $ListBranches = [BranchCollection]::new()
             # List per repo, the branches
-            ForEach ($repo in $this.adoInfo.RepositoryNames)
-            {
-                $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlBranches($repo)
-                $branches = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+            ForEach ($repo in $this.adoInfo.RepositoryNames){
+                $url = $this.AdoInfo.UrlAPI.GetUrlBranches($repo, "heads")
+                $branches = $this.AdoInfo.CallRestMethodGet($url)
                 If ($branches.value.length -eq 0)
                 {
                     Throw "[PublishListBranches] [Test-Json] Invalid response. Is token valid?"
@@ -68,15 +65,15 @@ class adoBranches {
 
                 #For each branch in the repo
                 ForEach ($branch in $branches.value | Where-Object { $_.name -match '^refs/heads/*' -and $_.name -notmatch '^refs/heads/master' -and $_.name -notmatch '^refs/heads/develop' -and $_.name -notmatch '^refs/heads/wiki' } ) {
-                    $urlPushes = $this.AdoInfo.AzureDevopsApiUrls.GetUrlPushes($repo, $branch.name)
-                    $pushes = Invoke-RestMethod -Uri $urlPushes -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+                    $urlPushes = $this.AdoInfo.UrlAPI.GetUrlPushes($repo, $branch.name)
+                    $pushes = $this.AdoInfo.CallRestMethodGet($urlPushes)
                     $lastpush = $pushes.value | Sort-Object -Descending { $_.date } | Select-Object -First 1
                     $measurePushes = $pushes.value | Measure-Object -Property date -Minimum -Maximum
                     $objbranchPushSummary = [BranchPushSummary]::new($measurePushes, $lastpush.pushedBy.displayName)
                     $objBranch = [Branch]::new($repo, $branch.name, $branch.creator.displayName, $branch.creator.uniqueName)
                     $objBranch.BranchPushSummary = $objbranchPushSummary
                     if ($objBranch.BranchPushSummary.LastPushDaysAgo -gt $daysAgoLastActivity) {
-                        $ListBranches.AddBranch($objBranch)
+                        $ListBranches.Add($objBranch)
                     }
                     else {
                         Write-Debug "[PublishListBranches] Skipped '$($branch.name)', because last activity was less or equal than $($daysAgoLastActivity) days ago."
@@ -84,14 +81,14 @@ class adoBranches {
                 }
             }
 
-            If ($ListBranches.Branches.Count -ne 0) {
+            If ($ListBranches.Collection.Count -ne 0) {
                 $dtmToday = (Get-Date).ToString("dd MMM yyyy HH:mm")
                 $mailSubject = "Overview of (feature) branches - $($dtmToday)"
                 Write-Debug "[PublishListBranches] [MailMessage] Subject: $($mailSubject)"
 
                 $mailBody = $ListBranches.GetOverviewHtml($daysAgoLastActivity)
-                If($this.config.GetStringFromConfig("EmailTo")){
-                    $stringTo = $this.config.GetStringFromConfig("EmailTo")
+                If($this.Config.GetStringFromConfig("EmailTo")){
+                    $stringTo = $this.Config.GetStringFromConfig("EmailTo")
                 }Else{
                     $stringTo = $ListBranches.GetUniqueEmailAdresses() -join ","
                 }
@@ -113,6 +110,51 @@ class adoBranches {
         }
         Finally {
             Write-Debug "[PublishListBranches] Done!"
+        }
+    }
+
+    <#
+    .SYNOPSIS
+    <see description>
+
+    .DESCRIPTION
+        Function which create a branch for the specified git repository
+
+    .PARAMETER PROPERTY nameOfNewBranch
+        Name of the new branches, includes the refs part
+
+    .NOTES
+        AUTHOR: Sven Ansem
+        LASTEDIT: June 22th, 2019
+
+        Initial version.
+    #>
+    [PSObject]CreateBranch (
+        [string]$repo, [string]$nameOfNewBranch, [string]$basedOnBranch, [bool]$includeTimeStamp) {
+        Try {
+                $dtmToday = (Get-Date).ToString("dd-MMM-yyyy-HHmm")
+                if ($includeTimeStamp -eq $true)
+                {
+                    $nameOfNewBranch = "$($nameOfNewBranch)-$($dtmToday)"
+                }
+                $basedOnBranch = $basedOnBranch.Replace('refs/', '')
+                $basedOnBranch = [System.Web.HttpUtility]::UrlEncode($basedOnBranch)
+                $url = $this.AdoInfo.UrlAPI.GetUrlBranches($repo, $basedOnBranch)
+                $branchesFound = $this.AdoInfo.CallRestMethodGet($url)
+                $SHABranchFrom = $branchesFound.value[0].objectId
+                $url = $this.AdoInfo.UrlAPI.CreateBranch($repo)
+                $jsonBody =  ([RequestBodyCreateBranch]::new($nameofNewBranch, $SHABranchFrom)).ToJson()
+                $branchCreated = $this.AdoInfo.CallRestMethodPost($url, $jsonBody)
+                if ($branchCreated.count -eq 0) {
+                    Throw "Branch creation failed!"
+                }
+                elseif ($branchCreated.value[0].success -eq $false) {
+                    Throw "Branch creation failed - $($branchCreated.value[0].updateStatus)!"
+                }
+                return $branchCreated;
+        }
+        Catch {
+            Throw "[Create Branch] [ERROR] Exception Message: $($_.Exception.Message)"
         }
     }
 }

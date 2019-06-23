@@ -1,3 +1,5 @@
+using module .\Base\CollectionBase.psm1
+
 <#
 .SYNOPSIS
 <see description>
@@ -65,19 +67,10 @@ class BranchPushSummary {
 Collection of Branches
 with a function to generatie HTML output
 #>
-class BranchCollection {
-    [Branch[]]$Branches
-
-    PullRequestCollection() {
-        $this.Branches = @()
-    }
-
-    [void]AddBranch([Branch] $branch) {
-        $this.Branches += $branch
-    }
+class BranchCollection : CollectionBase {
 
     [string[]]GetUniqueEmailAdresses() {
-        $EmailAddresses = $this.Branches.EmailCreator | Sort-Object | Get-Unique
+        $EmailAddresses = $this.Collection.EmailCreator | Sort-Object | Get-Unique
         Write-Debug "[Unique Emailaddresses] $($EmailAddresses)"
         return $EmailAddresses
     }
@@ -88,7 +81,7 @@ class BranchCollection {
         $headStyle = GetHtmlHeadStyle(90)
         $signature = GetSignature
 
-        $overView += $this.Branches | ConvertTo-Html -Property `
+        $overView += $this.Collection | ConvertTo-Html -Property `
             @{l='Repo'; e={$_.RepoName}}, `
             @{l='Branch'; e={$_.BranchNameTrimmed}}, Creator, `
             @{l='# Pushes'; e={$_.BranchPushSummary.Measure.Count}}, `

@@ -1,3 +1,4 @@
+using module ..\Helpers\ApiUrlsHelpers.psm1
 <#
 .SYNOPSIS
  see description
@@ -27,17 +28,13 @@
 
     Initial version.
 #>
-using module ..\Helpers\ApiUrlsHelpers.psm1
-
 class AdoInfo {
     [string]$AccountName
     [string]$ProjectName
     [string[]]$RepositoryNames
     [string]$User
     [string]$Token
-
-    [string]$Base64AuthInfo
-    [AzureDevopsApiUrls]$AzureDevopsApiUrls
+    [AzureDevopsApiUrls]$UrlAPI
 
     adoInfo ([string]$accountName, [string]$projectName, [string[]]$repositoryNames, `
         [string]$user, [string]$token){
@@ -47,20 +44,28 @@ class AdoInfo {
         $this.RepositoryNames = $repositoryNames
         $this.User = $user
         $this.Token = $token
+        $this.UrlAPI = [AzureDevopsApiUrls]::new($accountName, $projectName)
+    }
 
-        $this.AzureDevopsApiUrls = [AzureDevopsApiUrls]::new($accountName, $projectName)
-        $this.Base64AuthInfo = $this.AzureDevopsApiUrls.GetAuthBase64Info($user, $token)
+    [string]GetBase64AuthInfo() {
+        $returnValue = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $this.User, $this.Token)))
+        Write-Debug "[GetAuthBase64Info] Base64 Auth Info: $($returnValue)"
+        return $returnValue
     }
 
     [PSObject]CallRestMethodGet([string] $url) {
-       return Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.Base64AuthInfo)}
+       return Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.GetBase64AuthInfo())}
     }
 
+    [PSObject]CallRestMethodDelete([string] $url) {
+        return Invoke-RestMethod -Uri $url -Method Delete -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.GetBase64AuthInfo())}
+     }
+
     [PSObject]CallRestMethodPut([string] $url, [string]$jsonBody) {
-        return Invoke-RestMethod -Uri $url -Method Put -Body $jsonBody -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.Base64AuthInfo)}
+        return Invoke-RestMethod -Uri $url -Method Put -Body $jsonBody -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.GetBase64AuthInfo())}
      }
 
     [PSObject]CallRestMethodPost([string] $url, [string]$jsonBody) {
-        return Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.Base64AuthInfo)}
+        return Invoke-RestMethod -Uri $url -Method Post -Body $jsonBody -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.GetBase64AuthInfo())}
      }
 }

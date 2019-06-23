@@ -1,3 +1,5 @@
+using module .\Base\CollectionBase.psm1
+
 <#
 .SYNOPSIS
     <see description>
@@ -6,7 +8,7 @@
     Module file with class to gather information which is used to generate an overview of the pending pull requests
 
 .PARAMETER PROPERTY RepoName
-    Name of the Azure DevOps Git repo where the report is about 
+    Name of the Azure DevOps Git repo where the report is about
 
 .PARAMETER PROPERTY TargetBranchName
     Name of the branch which is target by the pull request (most of the time develop or master)
@@ -69,19 +71,10 @@ class PullRequest
 Collection of Pull Requests
 with a function to generatie HTML output
 #>
-class PullRequestCollection {
-    [PullRequest[]]$PullRequests
-
-    PullRequestCollection() {
-        $this.PullRequests = @()
-    }
-
-    [void]AddPullRequest([PullRequest] $pullRequest) {
-        $this.PullRequests += $pullRequest
-    }
+class PullRequestCollection : CollectionBase {
 
     [string[]]GetUniqueEmailAdresses() {
-        $EmailAddresses = $this.PullRequests.PullRequestReviewers.Reviewer.EmailReviewer | Sort-Object | Get-Unique
+        $EmailAddresses = $this.Collection.PullRequestReviewers.Reviewer.EmailReviewer | Sort-Object | Get-Unique
         Write-Debug "[Unique Emailaddresses] $($EmailAddresses)"
         $EmailAddresseReturn = $EmailAddresses | Where-Object { $_ -notlike "vstfs*"}
         return $EmailAddresseReturn
@@ -96,7 +89,7 @@ class PullRequestCollection {
         $overView += "<head>$($headStyle)</head>"
         $overView += "<body>"
         $repoText = ""
-        ForEach ($pullReq in $this.PullRequests) {
+        ForEach ($pullReq in $this.Collection) {
             Write-Debug "[GetOverviewHtml] $($pullReq.RepoName)"
             if ($repoText -ne $pullReq.RepoName) {
                 $overView += "<h2>Repo: $($pullReq.RepoName)</h2>"

@@ -50,9 +50,9 @@ class adoBuildDefinitions {
     #>
     [void]Export([string]$dropFolder, [int]$idBuildDefinition, [string]$componentName, [string]$buildDefinitionPath, [bool]$doStrip) {
         Try {
-            $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlBuildDefinition($idBuildDefinition)
+            $url = $this.adoInfo.UrlAPI.GetUrlBuildDefinition($idBuildDefinition)
 
-            $buildDefinition = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+            $buildDefinition =  $this.AdoInfo.CallRestMethodGet($url)
             $propertiesToRemove = @('comment', '_links', 'authoredBy', 'url', 'uri', 'createdDate', 'options')
             if ($doStrip -eq $true) {
                 ForEach($prop in $propertiesToRemove) {
@@ -103,7 +103,7 @@ class adoBuildDefinitions {
     [void]Create([string]$jsonBody) {
         Try {
 
-            $url = $this.AdoInfo.AzureDevopsApiUrls.CreateBuildDefinition()
+            $url = $this.adoInfo.UrlAPI.CreateBuildDefinition()
             $buildDefinition = $this.AdoInfo.CallRestMethodPost($url, $jsonBody)
             Write-Debug "[Create] Build Definition: $($buildDefinition.name) is created!"
         }
@@ -142,7 +142,7 @@ class adoBuildDefinitions {
     #>
     [void]Update([string]$jsonBody, [int]$idBuildDef) {
         Try {
-            $url = $this.AdoInfo.AzureDevopsApiUrls.UpdateBuildDefinition($idBuildDef)
+            $url = $this.adoInfo.UrlAPI.UpdateBuildDefinition($idBuildDef)
             $buildDefinition = $this.AdoInfo.CallRestMethodPut($url, $jsonBody)
             Write-Debug "[Update] Build Definition: $($buildDefinition.name) is updated!"
         }
@@ -172,8 +172,8 @@ class adoBuildDefinitions {
     #>
     [int]Exists([string]$buildName, [string]$buildDefinitionPath) {
         Try {
-            $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlBuildDefinitions($buildDefinitionPath, $buildName)
-            $buildDefinitions = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+            $url = $this.adoInfo.UrlAPI.GetUrlBuildDefinitions($buildDefinitionPath, $buildName)
+            $buildDefinitions =  $this.AdoInfo.CallRestMethodGet($url)
             Write-Debug "[Exists] Build Definitions: $($buildDefinitions.value.name)"
             return $buildDefinitions.value.name.Contains($buildName)
         }
@@ -188,7 +188,7 @@ class adoBuildDefinitions {
 
     [BuildDefinition]GetBuildDef([string]$uniqueBuildName, [string]$buildDefinitionPath) {
         Try {
-            $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlBuildDefinitions($buildDefinitionPath, $uniqueBuildName)
+            $url = $this.adoInfo.UrlAPI.GetUrlBuildDefinitions($buildDefinitionPath, $uniqueBuildName)
             $buildDefinitions = $this.AdoInfo.CallRestMethodGet($url)
             Write-Debug "[GetBuildDefId] Build Definitions: $($buildDefinitions.value.name)"
             if ($buildDefinitions.Count -eq 0) {
@@ -265,12 +265,12 @@ class adoBuildDefinitions {
     #>
     [void]DeleteAll([string]$buildDefinitionPath) {
         Try {
-            $url = $this.AdoInfo.AzureDevopsApiUrls.GetUrlBuildDefinitions($buildDefinitionPath)
-            $buildDefinitions = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+            $url = $this.adoInfo.UrlAPI.GetUrlBuildDefinitions($buildDefinitionPath)
+            $buildDefinitions =  $this.AdoInfo.CallRestMethodGet($url)
 
             ForEach ($buildDefinition in $buildDefinitions.value) {
-                $urlDelete = $this.AdoInfo.AzureDevopsApiUrls.DeleteBuildDefinition($buildDefinition.id)
-                Invoke-RestMethod -Uri $urlDelete -Method Delete -Headers @{Authorization=("Basic {0}" -f $this.AdoInfo.Base64AuthInfo)}
+                $urlDelete = $this.adoInfo.UrlAPI.DeleteBuildDefinition($buildDefinition.id)
+                $this.AdoInfo.CallRestMethodDelete($urlDelete)
                 Write-Debug "[DeleteAll] Deleted build defintion '$($buildDefinition.name)'"
             }
         }
